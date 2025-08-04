@@ -16,7 +16,7 @@ export class TrackerService implements OnDestroy{
     platform: Platform.WORK,
     batchSize: 10,
     flushInterval: 60000, // 1 minute
-    enableLocalStorage: true,
+    apiEndpoint: 'https://api.example.com/track',
     debug: false,
   }
   
@@ -25,10 +25,7 @@ export class TrackerService implements OnDestroy{
   private currentUser: UserIdentity | null = null;
 
   constructor(
-    private sessionService: SessionService,
-    private storageService: StorageService,
-    private trackerApiService: TrackerApiService,
-    private eventQueueService: EventQueueService
+    private
   ) {}
 
 

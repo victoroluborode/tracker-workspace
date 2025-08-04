@@ -23,7 +23,6 @@ export interface TrackerConfig {
   apiEndpoint?: string;
   batchSize?: number;
   flushInterval?: number;
-  enableLocalStorage?: boolean;
   debug?: boolean;
 }
 
