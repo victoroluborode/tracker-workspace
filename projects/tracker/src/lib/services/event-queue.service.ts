@@ -8,7 +8,7 @@ import { BehaviorSubject } from 'rxjs';
 
 export class EventQueueService {
   private queue: TrackingEvent[] = [];
-  private readonly maxQueueSize: number = 100;
+  private readonly maxQueueSize: number = 150;
   private queueSizeSubject = new BehaviorSubject<number>(0);
   private queueSize$ = this.queueSizeSubject.asObservable();
 

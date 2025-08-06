@@ -20,7 +20,8 @@ export interface TrackingEvent {
 
 export interface TrackerConfig {
   platform: string;
-  apiEndpoint?: string;
+  userIdentificationEndpoint: string,
+  eventIngestionEndpoint: string,
   batchSize?: number;
   flushInterval?: number;
   debug?: boolean;
