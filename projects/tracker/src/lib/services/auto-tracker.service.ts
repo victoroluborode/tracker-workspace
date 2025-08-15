@@ -7,71 +7,93 @@ import { TrackerService } from './tracker.service';
 import { EventNames } from '../enums/tracking.enums';
 
 @Injectable({
-    providedIn: "root"
+  providedIn: 'root',
 })
+export class AutoTrackerService implements OnDestroy {
+  private subscriptions: Subscription[] = [];
+  private isEnabled = false;
 
-export class AutoTrackerService implements OnDestroy{
-    private subscriptions: Subscription[] = [];
-    private isEnabled = false;
+  constructor(
+    private router: Router,
+    private location: Location,
+    private tracker: TrackerService
+  ) {}
 
-    constructor(
-        private router: Router,
-        private location: Location,
-        private tracker: TrackerService
-    ) { }
-    
-    enable(): void {
-        if (this.isEnabled) return;
+  enable(): void {
+    if (this.isEnabled) return;
+    this.isEnabled = true;
+    this.setupNavigationTracking();
+    this.setupClickTracking();
+    this.setupFormTracking();
+  }
 
-        this.isEnabled = true;
-        this.setupNavigationTracking();
-        this.setupClickTracking();
-        this.setupFormTracking();
-    }
+  disable(): void {
+    this.isEnabled = false;
+    this.subscriptions.forEach((sub) => sub.unsubscribe());
+    this.subscriptions = [];
+  }
 
-    disable(): void {
-        this.isEnabled = false;
-        this.subscriptions.forEach(sub => sub.unsubscribe());
-        this.subscriptions = [];
-    }
+  private setupNavigationTracking(): void {
+    const navSub = this.router.events
+      .pipe(filter((event) => event instanceof NavigationEnd))
+      .subscribe((event: NavigationEnd) => {
+        this.tracker.track(EventNames.PAGE_VIEW, {
+          url: event.url,
+          urlAfterRedirects: event.urlAfterRedirects,
+          timestamp: Date.now()
+        });
+      });
+  }
 
-    private setupNavigationTracking(): void {
-        const navSub = this.router.events
-            .pipe(filter(event => event instanceof NavigationEnd))
-            .subscribe((event: NavigationEnd) => {
-            // will write this later
-        })
-    }
+  private setupClickTracking(): void {
+    const clickSub = fromEvent(document, 'click').subscribe((event: Event) => {
+      const target = event.target as HTMLElement;
 
+      if (this.shouldTrackElement(target)) {
+        // will write this after i've written the trackerservice
+        this.tracker.track(EventNames.BUTTON_CLICK, {
+          tag: target.tagName.toLowerCase(),
+          text: target.textContent?.trim().substring(0, 100),
+          classes: target.className,
+          id: target.id,
+          href: (target as HTMLAnchorElement).href,
+          page: window.location.pathname,
+          timestamp: Date.now(),
+        });
+      }
+    });
+    this.subscriptions.push(clickSub);
+  }
 
-    private setupClickTracking(): void {
-        const clickSub = fromEvent(document, 'click')
-            .subscribe((event: Event) => {
-                const target = event.target as HTMLElement;
+  private shouldTrackElement(element: HTMLElement): boolean {
+    const trackableTags = ['button', 'a', 'input'];
+    const trackableTypes = ['button', 'submit', 'reset'];
 
-                if (this.shouldTrackElement(target)) {
-                    // will write this after i've written the trackerservice
-                }
-            });
-    }
+    return (
+      trackableTags.includes(element.tagName.toLowerCase()) ||
+      (element.tagName.toLowerCase() === 'input' &&
+        trackableTypes.includes((element as HTMLInputElement).type))
+    );
+  }
 
-    private shouldTrackElement(element: HTMLElement): boolean {
-        const trackableTags = ['button', 'a', 'input'];
-        const trackableTypes = ['button', 'submit', 'reset'];
+  private setupFormTracking(): void {
+    const formSub = fromEvent(document, 'submit').subscribe((event: Event) => {
+      const form = event.target as HTMLFormElement;
 
-        return trackableTags.includes(element.tagName.toLowerCase()) || (element.tagName.toLowerCase() === 'input' && trackableTypes.includes((element as HTMLInputElement).type))
-    }
+      //will write this after i've written the trackerservice
+      this.tracker.track('form_submit', {
+        formId: form.id,
+        formName: form.name,
+        formAction: form.action,
+        formMethod: form.method,
+        page: window.location.pathname,
+        timestamp: Date.now(),
+      });
+    });
+    this.subscriptions.push(formSub);
+  }
 
-    private setupFormTracking(): void {
-        const formSub = fromEvent(document, 'submit')
-            .subscribe((event: Event) => {
-                const form = event.target as HTMLFormElement;
-
-                //will write this after i've written the trackerservice
-        })
-    }
-
-    ngOnDestroy(): void {
-        this.disable();
-    }
+  ngOnDestroy(): void {
+    this.disable();
+  }
 }

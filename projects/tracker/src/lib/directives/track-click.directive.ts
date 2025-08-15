@@ -22,21 +22,29 @@ export class TrackClickDirective {
 
     @HostListener('click', ['$event'])
     onClick(event: MouseEvent): void {
-        const element = this.el.nativeElement; // retrieves the raw html element
-
+        const element = this.el.nativeElement as HTMLElement;
         const elementInfo = {
             tag: element.tagName.toLowerCase(),
             text: element.textContent?.trim().substring(0, 100) || '',
-            classes: element.className || '',
-            id: element.id || '',
-            href: element.href || '',
+            classes: (element.className as string) || '',
+            id: (element.id as string) || '',
+            href: (element as HTMLAnchorElement).href || '',
             ...this.trackProperties
         };
 
 
         const eventName = this.trackClick || this.trackEventName
 
-        // Tracking the Click, I'll do this after i've written the tracker service
+
+        this.tracker.track(eventName as string, {
+            element: elementInfo,
+            page: typeof window !== 'undefined' ? window.location.pathname : 'server',
+            timestamp: Date.now(),
+            clickPosition: {
+                x: event.clientX,
+                y: event.clientY
+            }
+        });
     }
 
     

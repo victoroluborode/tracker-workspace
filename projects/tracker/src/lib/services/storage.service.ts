@@ -15,7 +15,7 @@ export class StorageService {
   private db: IDBDatabase | null = null;  // holds reference to the indexedDB once it's successfully opened.
 
   constructor() {
-    this.initDB();
+    this.initDB().catch((e) => console.warn('IndexedDB init failed', e));
   }
 
   //setting up the database
@@ -27,11 +27,6 @@ export class StorageService {
       request.onerror = () => {
         console.warn("Failed to open IndexedDB:", request.error);
         reject(request.error)
-      }
-
-      request.onsuccess = () => {
-        this.db = request.result;
-        resolve();
       }
 
       //Database schema creation
@@ -50,6 +45,11 @@ export class StorageService {
             keyPath: 'userId'
           })
         }
+      };
+
+      request.onsuccess = () => {
+        this.db = request.result;
+        resolve();
       }
     })
   }
@@ -71,6 +71,8 @@ export class StorageService {
   //Storing events
 
   async saveEvents(events: TrackingEvent[]): Promise<void> {
+    if (!events.length) return;
+
     try {
       const db = await this.ensureDB();
       const existingEvents = await this.getStoredEvents();
@@ -84,22 +86,23 @@ export class StorageService {
       const transaction = db.transaction([this.EVENTS_STORE], 'readwrite');
       const store = transaction.objectStore(this.EVENTS_STORE);
 
-      await this.clearStoredEvents();
+      return new Promise((resolve, reject) => {
+        transaction.oncomplete = () => resolve();
+        transaction.onerror = () => reject(transaction.error);
 
+        const clearRequest = store.clear();
 
-      //add new events
-      const promises = limitedEvents.map(event =>
-        new Promise<void>((resolve, reject) => {
-          const request = store.add(event);
-          request.onsuccess = () => resolve();
-          request.onerror = () => reject(request.error);
-        })
-      );
+        clearRequest.onsuccess = () => {
+          limitedEvents.forEach(event => {
+            store.add(event);
+          });
+        };
 
-      await Promise.all(promises);
-
+        clearRequest.onerror = () => reject(clearRequest.error);
+      });
     } catch (error) {
       console.warn('Failed to save events:', error);
+      throw error;
     }
   }
 
@@ -173,6 +176,7 @@ const db = await this.ensureDB();
       });
     } catch (error) {
       console.warn('Failed to save user:', error);
+      throw error;
     }
   }
 
@@ -187,8 +191,7 @@ const db = await this.ensureDB();
       return new Promise((resolve, reject) => {
         // Get the first (and should be only) user record
         const request = store.openCursor();
-        
-        request.onsuccess = () => {
+         request.onsuccess = () => {
           const cursor = request.result;
           if (cursor) {
             resolve(cursor.value);
@@ -226,6 +229,7 @@ const db = await this.ensureDB();
       });
     } catch (error) {
       console.warn('Failed to clear user:', error);
+      throw error;
     }
   }
 

@@ -18,7 +18,8 @@
       "tracker": [
         "./dist/tracker"
       ]
-    }
+    },
+    "types": ["node"]
   },
   "angularCompilerOptions": {
     "enableI18nLegacyMessageIdFormat": false,

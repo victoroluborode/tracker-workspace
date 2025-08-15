@@ -25,6 +25,7 @@ export interface TrackerConfig {
   batchSize?: number;
   flushInterval?: number;
   debug?: boolean;
+  autocapture?: boolean;
 }
 
 export interface EventBatch {
