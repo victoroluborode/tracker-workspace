@@ -22,9 +22,9 @@ export class TrackerService implements OnDestroy {
   private config: TrackerConfig = {
     platform: Platform.WORK,
     batchSize: 50,
-    flushInterval: 60000, // 1 minute
-    userIdentificationEndpoint: 'https://api.yourdomain.com/identify',
-    eventIngestionEndpoint: 'https://api.yourdomain.com/track',
+    flushInterval: 60000, 
+    userIdentificationEndpoint: 'https://api/identify',
+    eventIngestionEndpoint: 'https://api/events',
     debug: false,
     autocapture: false
   };
@@ -43,7 +43,7 @@ export class TrackerService implements OnDestroy {
     @Optional() private injector?: Injector,
   ) {}
 
-  //Accepts a partial configuration (callers don't need to provide all config keys, just what they want to override)
+  
   async initialize(config: Partial<TrackerConfig>): Promise<void> {
     this.config = { ...this.config, ...config };
     this.isInitialized = true;
@@ -52,13 +52,13 @@ export class TrackerService implements OnDestroy {
       console.log('Tracker Initialized: ', this.config);
     }
 
-    //starts the background timer to flush events to the backend
+    
    this.startAutoFlush();
 
-    //loads previously stored users
+    
     await this.loadStoredUser().then(() => {});
 
-    //loads previously stored events from indexedDB
+    
     await this.loadStoredEvents().then(() => {});
 
     if (this.preInitQueue.length > 0) {
@@ -87,7 +87,7 @@ export class TrackerService implements OnDestroy {
 
   
 
-  //This saves the user's identity, updates the session service, persists user to indexedDB and sends it to the Backend
+  
   identify(userInfo: UserIdentity): void {
     if (!this.isInitialized) {
       console.warn('Tracker not initialized');
@@ -112,7 +112,7 @@ export class TrackerService implements OnDestroy {
     }
   }
 
-  // Tracks events, queues them for sending.
+  
   track(eventName: string, properties?: Record<string, any>): void {
   const event: TrackingEvent = {
     eventId: this.generateEventId(),
@@ -126,14 +126,14 @@ export class TrackerService implements OnDestroy {
     page: this.getCurrentPage(),
   };
 
-  // Check initialization ONCE and handle accordingly
+  
   if (!this.isInitialized) {
     this.preInitQueue.push(event);
     if (this.config.debug) console.log('Queued pre-init event', event);
     return;
   }
 
-  // If we reach here, tracker is initialized
+  
   this.eventQueue.addEvent(event);
 
   if (this.config.debug) {
@@ -145,7 +145,7 @@ export class TrackerService implements OnDestroy {
   }
 }
 
-  // Flushes events to the Api
+  
   flush(): void {
     if (!this.eventQueue.hasEvents()) {
       return;
@@ -180,7 +180,7 @@ export class TrackerService implements OnDestroy {
     }
   }
 
-  //resets the current session info and user
+  
   reset(): void {
     this.currentUser = null;
     this.eventQueue.clearQueue();
@@ -193,22 +193,22 @@ export class TrackerService implements OnDestroy {
     }
   }
 
-  // Returns the currently tracked user
+  
   getCurrentUser(): UserIdentity | null {
     return this.currentUser;
   }
 
-  // Checks if the tracker is ready
+  
   isReady(): boolean {
     return this.isInitialized;
   }
 
-  // Get queue size
+
   getQueueSize(): number {
     return this.eventQueue.getQueueSize();
   }
 
-  // Flushes events every 60000 milliseconds
+  
   private startAutoFlush(): void {
     if (this.flushSubscription) {
       this.flushSubscription.unsubscribe();
@@ -223,7 +223,7 @@ export class TrackerService implements OnDestroy {
     });
   }
 
-  // Loads previously saved user data if it exists
+  
   private async loadStoredUser(): Promise<void> {
     try {
       this.storageService.getStoredUser().then((storedUser) => {
@@ -237,7 +237,7 @@ export class TrackerService implements OnDestroy {
     }
   }
 
-  // Loads unsent events from a previous session
+  
   private async loadStoredEvents(): Promise<void> {
     try {
       const storedEvents = await this.storageService.getStoredEvents();

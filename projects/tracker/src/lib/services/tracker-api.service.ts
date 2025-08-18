@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpErrorResponse } from '@angular/common/http';
 import { Observable, of, timer } from 'rxjs';
-import { retry, catchError, mergeMap, finalize, retryWhen } from 'rxjs/operators';
+import { retry, catchError } from 'rxjs/operators';
 import { TrackingEvent, EventBatch, UserIdentity } from '../interfaces';
 interface RetryConfig {
   maxRetries: number;
