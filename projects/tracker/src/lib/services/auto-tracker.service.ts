@@ -1,4 +1,4 @@
-import { Injectable, OnDestroy } from '@angular/core';
+import { Injectable, OnDestroy, NgZone } from '@angular/core';
 import { Router, NavigationEnd } from '@angular/router';
 import { Location } from '@angular/common';
 import { Subscription, fromEvent } from 'rxjs';
@@ -16,7 +16,8 @@ export class AutoTrackerService implements OnDestroy {
   constructor(
     private router: Router,
     private location: Location,
-    private tracker: TrackerService
+    private tracker: TrackerService,
+    private ngZone: NgZone 
   ) {}
 
   enable(): void {
@@ -37,35 +38,53 @@ export class AutoTrackerService implements OnDestroy {
     const navSub = this.router.events
       .pipe(filter((event) => event instanceof NavigationEnd))
       .subscribe((event: NavigationEnd) => {
-        this.tracker.track(EventNames.PAGE_VIEW, {
-          url: event.url,
-          urlAfterRedirects: event.urlAfterRedirects,
-          timestamp: Date.now()
-        });
+        try {
+          this.tracker.track(EventNames.PAGE_VIEW, {
+            url: event.url,
+            urlAfterRedirects: event.urlAfterRedirects,
+            timestamp: Date.now(),
+          });
+        } catch (err) {
+          console.warn('AutoTracker: Navigation tracking failed', err);
+        }
       });
+
+    this.subscriptions.push(navSub);
   }
 
   private setupClickTracking(): void {
-    const clickSub = fromEvent(document, 'click').subscribe((event: Event) => {
-      const target = event.target as HTMLElement;
+    this.ngZone.runOutsideAngular(() => {
+      const clickSub = fromEvent(document, 'click', { passive: true })
+        .subscribe((event: Event) => {
+          const target = event.target as HTMLElement;
 
-      if (this.shouldTrackElement(target)) {
-        // will write this after i've written the trackerservice
-        this.tracker.track(EventNames.BUTTON_CLICK, {
-          tag: target.tagName.toLowerCase(),
-          text: target.textContent?.trim().substring(0, 100),
-          classes: target.className,
-          id: target.id,
-          href: (target as HTMLAnchorElement).href,
-          page: window.location.pathname,
-          timestamp: Date.now(),
+          if (this.shouldTrackElement(target)) {
+            try {
+              this.tracker.track(EventNames.BUTTON_CLICK, {
+                tag: target.tagName.toLowerCase(),
+                text: target.textContent?.trim().substring(0, 100),
+                classes: target.className,
+                id: target.id,
+                href: (target as HTMLAnchorElement).href,
+                page: window.location.pathname,
+                timestamp: Date.now(),
+              });
+            } catch (err) {
+              console.warn('AutoTracker: Click tracking failed', err);
+            }
+          }
         });
-      }
+
+      this.subscriptions.push(clickSub); 
     });
-    this.subscriptions.push(clickSub);
   }
 
   private shouldTrackElement(element: HTMLElement): boolean {
+    
+    if (element.closest('[data-track-ignore]')) {
+      return false;
+    }
+
     const trackableTags = ['button', 'a', 'input'];
     const trackableTypes = ['button', 'submit', 'reset'];
 
@@ -77,20 +96,29 @@ export class AutoTrackerService implements OnDestroy {
   }
 
   private setupFormTracking(): void {
-    const formSub = fromEvent(document, 'submit').subscribe((event: Event) => {
-      const form = event.target as HTMLFormElement;
+    this.ngZone.runOutsideAngular(() => {
+      const formSub = fromEvent(document, 'submit', { passive: true }) 
+        .subscribe((event: Event) => {
+          const form = event.target as HTMLFormElement;
 
-      //will write this after i've written the trackerservice
-      this.tracker.track('form_submit', {
-        formId: form.id,
-        formName: form.name,
-        formAction: form.action,
-        formMethod: form.method,
-        page: window.location.pathname,
-        timestamp: Date.now(),
-      });
+          if (form && !form.hasAttribute('data-track-ignore')) {
+            try {
+              this.tracker.track('form_submit', {
+                formId: form.id,
+                formName: form.name,
+                formAction: form.action,
+                formMethod: form.method,
+                page: window.location.pathname,
+                timestamp: Date.now(),
+              });
+            } catch (err) {
+              console.warn('AutoTracker: Form tracking failed', err);
+            }
+          }
+        });
+
+      this.subscriptions.push(formSub);
     });
-    this.subscriptions.push(formSub);
   }
 
   ngOnDestroy(): void {

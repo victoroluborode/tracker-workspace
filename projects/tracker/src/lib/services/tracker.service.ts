@@ -11,9 +11,9 @@ import { SessionService } from './session.service';
 import { StorageService } from './storage.service';
 import { TrackerApiService } from './tracker-api.service';
 import { EventQueueService } from './event-queue.service';
-import type { AutoTrackerService as AutoTrackerServiceType } from './auto-tracker.service';
+import { AutoTrackerService } from './auto-tracker.service';
 
-let AutoTrackerService: any;
+
 
 @Injectable({
   providedIn: 'root',
@@ -72,10 +72,8 @@ export class TrackerService implements OnDestroy {
 
   private async enableAutoCapture(): Promise<void> {
   try {
-    const { AutoTrackerService } = await import('./auto-tracker.service');
-    const autoTracker = inject<AutoTrackerServiceType>(AutoTrackerService);
-
-    autoTracker?.enable?.();
+    const autoTracker = this.injector?.get(AutoTrackerService);
+    autoTracker?.enable();
     if (this.config.debug) {
       console.log('AutoTracker enabled');
     }
@@ -116,39 +114,36 @@ export class TrackerService implements OnDestroy {
 
   // Tracks events, queues them for sending.
   track(eventName: string, properties?: Record<string, any>): void {
-    if (!this.isInitialized) {
-      console.warn('Tracker not initialized');
-      return;
-    }
+  const event: TrackingEvent = {
+    eventId: this.generateEventId(),
+    eventName,
+    userId: this.sessionService.getUserId() || undefined,
+    sessionId: this.sessionService.getSessionId(),
+    organizationId: this.currentUser?.organizationId,
+    timestamp: Date.now(),
+    properties,
+    platform: this.config.platform,
+    page: this.getCurrentPage(),
+  };
 
-    const event: TrackingEvent = {
-      eventId: this.generateEventId(),
-      eventName,
-      userId: this.sessionService.getUserId() || undefined,
-      sessionId: this.sessionService.getSessionId(),
-      organizationId: this.currentUser?.organizationId,
-      timestamp: Date.now(),
-      properties,
-      platform: this.config.platform,
-      page: this.getCurrentPage(),
-    };
-
-    if (!this.isInitialized) {
-      this.preInitQueue.push(event);
-      if (this.config.debug) console.log('Queued pre-init event', event);
-      return;
-    }
-
-    this.eventQueue.addEvent(event);
-
-    if (this.config.debug) {
-      console.log('Event tracked:', event);
-    }
-
-    if (this.eventQueue.getQueueSize() >= (this.config.batchSize || 30)) {
-      this.flush();
-    }
+  // Check initialization ONCE and handle accordingly
+  if (!this.isInitialized) {
+    this.preInitQueue.push(event);
+    if (this.config.debug) console.log('Queued pre-init event', event);
+    return;
   }
+
+  // If we reach here, tracker is initialized
+  this.eventQueue.addEvent(event);
+
+  if (this.config.debug) {
+    console.log('Event tracked:', event);
+  }
+
+  if (this.eventQueue.getQueueSize() >= (this.config.batchSize || 30)) {
+    this.flush();
+  }
+}
 
   // Flushes events to the Api
   flush(): void {
@@ -265,7 +260,7 @@ export class TrackerService implements OnDestroy {
   }
 
   private generateBatchId(): string {
-    return `batch_${Date.now}_${Math.random().toString(36).substring(2, 9)}`;
+    return `batch_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
   }
 
   private getCurrentPage(): string {
