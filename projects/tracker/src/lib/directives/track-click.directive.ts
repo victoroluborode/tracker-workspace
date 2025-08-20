@@ -3,22 +3,22 @@ import { TrackerService } from '../services/tracker.service';
 import { EventNames } from '../enums/tracking.enums';
 
 
-// Tells Angular that this is a directive
+
 @Directive({
     selector: '[trackClick]'
 })
 
 export class TrackClickDirective {
-    @Input() trackClick: string = ''; // Let's you pass a custom event name into the directive
-    @Input() trackProperties: Record<string, any> = {}; //This lets you attach additional data to the tracking event
-    @Input() trackEventName: EventNames = EventNames.BUTTON_CLICK; //A fallback to use one of the enum values if trackClick is not provided
+    @Input() trackClick: string = ''; 
+    @Input() trackProperties: Record<string, any> = {}; 
+    @Input() trackEventName: EventNames = EventNames.BUTTON_CLICK; 
 
     constructor(
         private tracker: TrackerService,
         private el: ElementRef
     ) { }
     
-    // Listening for Clicks: 
+    
 
     @HostListener('click', ['$event'])
     onClick(event: MouseEvent): void {

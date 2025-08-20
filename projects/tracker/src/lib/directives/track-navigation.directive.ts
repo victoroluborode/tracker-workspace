@@ -11,7 +11,7 @@ import { EventNames } from "../enums";
 })
 
 export class TrackNavigationDirective implements OnInit, OnDestroy {
-    private navigationSubscription?: Subscription;  //stores the subscription so we can later unsubscribe in ngOnDestroy
+    private navigationSubscription?: Subscription;  
     private previousUrl: string = '';
 
     constructor(
@@ -20,7 +20,7 @@ export class TrackNavigationDirective implements OnInit, OnDestroy {
     ) { }
 
     ngOnInit(): void {
-        this.previousUrl = this.router.url;  // this.router.url gives the current url in the browser when the directive is first loaded
+        this.previousUrl = this.router.url; 
         this.navigationSubscription = this.router.events
             .pipe(filter(event => event instanceof NavigationEnd))
             .subscribe((event: NavigationEnd) => {

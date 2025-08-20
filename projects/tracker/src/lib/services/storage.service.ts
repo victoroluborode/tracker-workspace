@@ -12,16 +12,16 @@ export class StorageService {
   private readonly EVENTS_STORE = 'events';
   private readonly USER_STORE = 'user';
   private readonly MAX_EVENTS = 50;
-  private db: IDBDatabase | null = null;  // holds reference to the indexedDB once it's successfully opened.
+  private db: IDBDatabase | null = null;  
 
   constructor() {
     this.initDB().catch((e) => console.warn('IndexedDB init failed', e));
   }
 
-  //setting up the database
+  
   private async initDB(): Promise<void> {
     return new Promise((resolve, reject) => {
-      // to open or create the database
+     
       const request = indexedDB.open(this.DB_NAME, this.DB_VERSION);
       
       request.onerror = () => {
@@ -29,17 +29,17 @@ export class StorageService {
         reject(request.error)
       }
 
-      //Database schema creation
+      
       request.onupgradeneeded = (event) => {
         const db = (event.target as IDBOpenDBRequest).result;
 
-        //create the events store
+        
         if (!db.objectStoreNames.contains(this.EVENTS_STORE)) {
           const eventsStore = db.createObjectStore(this.EVENTS_STORE, { keyPath: 'eventId' });
           eventsStore.createIndex('timestamp', 'timestamp', { unique: false });
         }
 
-        //create the user store
+        
         if (!db.objectStoreNames.contains(this.USER_STORE)) {
           db.createObjectStore(this.USER_STORE, {
             keyPath: 'userId'
@@ -54,7 +54,7 @@ export class StorageService {
     })
   }
   
-  //Ensures database connection is open before any operation is attempted 
+  
   private async ensureDB(): Promise<IDBDatabase> {
     if (!this.db) {
       await this.initDB();
@@ -68,7 +68,7 @@ export class StorageService {
   }
 
 
-  //Storing events
+  
 
   async saveEvents(events: TrackingEvent[]): Promise<void> {
     if (!events.length) return;
@@ -82,7 +82,7 @@ export class StorageService {
         .sort((a, b) => b.timestamp - a.timestamp)
         .slice(0, this.MAX_EVENTS);
       
-      //setting up a transaction in IndexedDB to modify the EVENTS_STORE
+      
       const transaction = db.transaction([this.EVENTS_STORE], 'readwrite');
       const store = transaction.objectStore(this.EVENTS_STORE);
 
